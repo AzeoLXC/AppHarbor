@@ -1,34 +1,49 @@
 # AppHarbor
 
-AppHarbor is an Android app inventory and package utility. It uses a compact, dark interface built from Android views and Android's public package APIs.
+AppHarbor is an Android app inventory and package utility. It gives you a searchable view of installed apps, lets you inspect package metadata, and provides APK import and export tools. The interface is built with native Android views and uses Android's package APIs.
 
-## Features
+## What it can do
 
-- Search installed packages by app name or package ID.
-- Filter user, system, and disabled apps; sort by name or recent update.
-- Inspect requested permissions and declared activities, services, receivers, and providers.
-- Review a single APK file before asking Android to install it.
-- Export selected installed apps' base and split APK files into a ZIP archive.
-- Save local package lists for later selection.
-- Open Android's app settings and launch an installed app.
-- Run selected package operations through su on rooted devices.
+- Search installed apps by display name or package ID.
+- Filter user, system, and disabled packages, and sort by name or last update.
+- Inspect app version, install dates, requested permissions, and declared activities, services, receivers, and providers.
+- Open an app or its Android settings page.
+- Inspect and install one APK file at a time through Android's package installer.
+- Export selected apps' base and split APK files to a ZIP archive.
+- Save package selections as local lists for later use.
+- Run package actions with root access: enable, disable, force stop, clear app data, or uninstall for the current user.
+- Open Android's Usage Access settings.
 
-## Platform behavior
+## Requirements
 
-AppHarbor targets Android 15 (API 35), compiles against Android 16 (API 36), and supports Android 6.0 (API 23) and newer.
+- Android 6.0 (API 23) or newer.
+- Root access for root-only package actions. AppHarbor requests authorization from the device's `su` manager when an action is run.
+- For builds: JDK 21 and Android SDK Platform 36 with Build Tools 36.0.0.
 
-The Android package installer handles APK installation and may show its own confirmation screens. AppHarbor's root actions ask the device's su manager for access. Without root, package disable, force-stop, data-clear, and uninstall actions won't be available to the app.
+AppHarbor targets Android 15 (API 35) and compiles against Android 16 (API 36). It requests `QUERY_ALL_PACKAGES` to show a device-wide app inventory and `REQUEST_INSTALL_PACKAGES` for APK installs. Distribution platforms may apply additional package visibility or installation policies.
 
-APK export includes the package's base APK and split APK files where Android exposes readable paths. It does not include private app data. APK inspection and installation support one .apk file at a time; app bundles and split-APK sets are not install inputs.
+## Build
 
-The app requests QUERY_ALL_PACKAGES to show a device-wide inventory. Android distribution channels may impose additional package visibility policies.
+The project uses the Gradle Wrapper (Gradle 9.9.0). From the project root, run:
 
-This first version covers core inventory and package operations. It does not include private app-data backup or restore, app-op and component editors, tracker analysis, remote ADB access, network-policy controls, or usage-history reports.
+```bash
+bash ./gradlew assembleDebug
+```
 
-## Automated build
+The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
-The Gradle Wrapper pins Gradle 9.9.0 and checks its SHA-256 before use. The GitHub Actions workflow validates the Wrapper, installs JDK 21 and Android SDK Platform 36, and builds the debug APK on pushes, pull requests, and manual runs. It uploads the APK as the appharbor-debug-apk workflow artifact.
+## Important behavior
+
+- APK installation is handed to Android's package installer, which may display its own confirmation screens. AppHarbor can inspect one `.apk` file; app bundles and multi-APK install sets are not supported as inputs.
+- APK export copies the base APK and any readable split APK files exposed by Android. It does not back up private app data.
+- Root actions require an installed root manager and can change or remove apps and their data. AppHarbor asks for confirmation before running them.
+- Saved lists and settings are stored locally on the device.
+- AppHarbor does not provide private app-data backup or restore, app-op or component editors, tracker analysis, remote ADB access, network-policy controls, or usage-history reports.
+
+## GitHub Actions
+
+The Android build workflow validates the Gradle Wrapper, sets up JDK 21 and Android SDK Platform 36, then builds the debug APK on pushes, pull requests, or manual runs. It uploads the APK as the `appharbor-debug-apk` artifact for 14 days.
 
 ## License
 
-Choose and add a license before distributing this project. No third-party application code, resources, or artwork are included.
+AppHarbor is licensed under GPL-3.0. See [LICENSE](LICENSE) for the full text.
