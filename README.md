@@ -44,6 +44,8 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 The Android build workflow validates the Gradle Wrapper, sets up JDK 21 and Android SDK Platform 36, then builds the debug APK on pushes, pull requests, or manual runs. It uploads the APK as the `appharbor-debug-apk` artifact for 14 days.
 
+Pushes to `main` also create a GitHub Release. The release title and tag use `vYYYYMMDD-<6-character-commit-SHA>` (UTC), for example `v20261107-a1b2c3`. The release contains only the APK asset, named `AppHarbor-vYYYYMMDD-<6-character-commit-SHA>.apk`.
+
 ## License
 
 AppHarbor is licensed under GPL-3.0. See [LICENSE](LICENSE) for the full text.

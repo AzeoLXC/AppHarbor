@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   debug-apk:
@@ -39,10 +39,41 @@ jobs:
       - name: Build debug APK
         run: bash ./gradlew --no-daemon --stacktrace assembleDebug
 
-      - name: Upload debug APK
+      - name: Prepare versioned APK
+        id: versioned_apk
+        run: |
+          set -euo pipefail
+          release_tag="v$(date -u +%Y%m%d)-${GITHUB_SHA:0:6}"
+          apk_name="AppHarbor-${release_tag}.apk"
+          apk_path="${RUNNER_TEMP}/${apk_name}"
+          cp app/build/outputs/apk/debug/app-debug.apk "${apk_path}"
+          echo "tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+          echo "path=${apk_path}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload versioned APK artifact
         uses: actions/upload-artifact@v7.0.2
         with:
           name: appharbor-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ steps.versioned_apk.outputs.path }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish GitHub release
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.versioned_apk.outputs.tag }}
+          APK_PATH: ${{ steps.versioned_apk.outputs.path }}
+        run: |
+          set -euo pipefail
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" "${APK_PATH}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          else
+            gh release create "${RELEASE_TAG}" "${APK_PATH}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${RELEASE_TAG}" \
+              --target "${GITHUB_SHA}" \
+              --generate-notes
+          fi

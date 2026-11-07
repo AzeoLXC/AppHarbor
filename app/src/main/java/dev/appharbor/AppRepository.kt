@@ -2,11 +2,12 @@ package dev.appharbor
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.ComponentInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.PermissionInfo
-import android.os.Build
 import android.graphics.drawable.Drawable
+import android.os.Build
 import java.io.File
 
 data class PermissionRecord(
@@ -62,7 +63,8 @@ class AppRepository(private val context: Context) {
 
     fun get(packageName: String): AppRecord? = runCatching {
         val info = packageInfo(packageName, inspectionFlags)
-        record(info, info.applicationInfo)
+        val appInfo = info.applicationInfo ?: return@runCatching null
+        record(info, appInfo)
     }.getOrNull()
 
     fun inspectArchive(file: File): AppRecord? = runCatching {
