@@ -28,8 +28,7 @@ class DetailsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = HarborPalette.background
-        window.navigationBarColor = HarborPalette.background
+        window.applyAppSystemBars()
         archivePath = intent.getStringExtra(EXTRA_ARCHIVE_PATH)
         app = if (archivePath != null) repository.inspectArchive(File(archivePath!!))
         else intent.getStringExtra(EXTRA_PACKAGE)?.let(repository::get)
@@ -50,8 +49,8 @@ class DetailsActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(HarborPalette.background)
-            setPadding(dp(17f), dp(12f), dp(17f), dp(12f))
         }
+        root.applySystemBarInsets(dp(17f), dp(12f), dp(17f), dp(12f))
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL

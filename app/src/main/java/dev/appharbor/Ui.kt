@@ -1,23 +1,78 @@
 package dev.appharbor
 
 import android.content.Context
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.view.Window
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.Gravity
 import android.view.View
 import android.widget.TextView
 
 object HarborPalette {
-    val background = Color.rgb(8, 21, 29)
-    val surface = Color.rgb(16, 38, 48)
-    val surfaceRaised = Color.rgb(24, 51, 62)
-    val border = Color.rgb(38, 69, 78)
-    val accent = Color.rgb(101, 230, 196)
-    val accentAlt = Color.rgb(186, 155, 255)
-    val text = Color.rgb(238, 247, 244)
-    val muted = Color.rgb(157, 180, 182)
-    val warning = Color.rgb(255, 194, 116)
-    val danger = Color.rgb(255, 130, 137)
+    val isDark: Boolean
+        get() = (Resources.getSystem().configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+
+    val background get() = if (isDark) Color.rgb(20, 22, 25) else Color.rgb(244, 245, 247)
+    val surface get() = if (isDark) Color.rgb(30, 33, 38) else Color.WHITE
+    val surfaceRaised get() = if (isDark) Color.rgb(41, 45, 52) else Color.rgb(234, 237, 241)
+    val border get() = if (isDark) Color.rgb(59, 64, 73) else Color.rgb(213, 217, 224)
+    val accent get() = if (isDark) Color.rgb(174, 187, 208) else Color.rgb(70, 86, 111)
+    val accentAlt get() = if (isDark) Color.rgb(146, 154, 166) else Color.rgb(104, 115, 134)
+    val onAccent get() = if (isDark) Color.rgb(26, 29, 34) else Color.WHITE
+    val text get() = if (isDark) Color.rgb(236, 238, 241) else Color.rgb(32, 36, 42)
+    val muted get() = if (isDark) Color.rgb(165, 170, 179) else Color.rgb(100, 107, 117)
+    val warning get() = if (isDark) Color.rgb(216, 164, 85) else Color.rgb(154, 104, 28)
+    val danger get() = if (isDark) Color.rgb(225, 134, 134) else Color.rgb(179, 38, 30)
+}
+
+fun Window.applyAppSystemBars() {
+    statusBarColor = HarborPalette.background
+    navigationBarColor = HarborPalette.background
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        setDecorFitsSystemWindows(false)
+        val lightBars = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+            WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+        insetsController?.setSystemBarsAppearance(
+            if (HarborPalette.isDark) 0 else lightBars,
+            lightBars
+        )
+    } else {
+        @Suppress("DEPRECATION")
+        var flags = View.SYSTEM_UI_FLAG_VISIBLE
+        if (!HarborPalette.isDark) {
+            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            }
+        }
+        @Suppress("DEPRECATION")
+        decorView.systemUiVisibility = flags
+    }
+}
+
+fun View.applySystemBarInsets(left: Int, top: Int, right: Int, bottom: Int) {
+    setPadding(left, top, right, bottom)
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+
+    setOnApplyWindowInsetsListener { view, insets ->
+        val safeInsets = insets.getInsets(
+            WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
+        )
+        view.setPadding(
+            left + safeInsets.left,
+            top + safeInsets.top,
+            right + safeInsets.right,
+            bottom + safeInsets.bottom
+        )
+        insets
+    }
 }
 
 fun Context.dp(value: Float): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
@@ -26,7 +81,7 @@ fun rounded(color: Int, radius: Float, stroke: Int? = null): GradientDrawable =
     GradientDrawable().apply {
         setColor(color)
         cornerRadius = radius
-        if (stroke != null) setStroke(1, stroke)
+        if (stroke != null) setStroke(2, stroke)
     }
 
 fun label(
@@ -57,7 +112,7 @@ fun actionText(
     13f,
     when {
         danger -> HarborPalette.danger
-        active -> HarborPalette.background
+        active -> HarborPalette.onAccent
         else -> HarborPalette.text
     },
     bold = true,

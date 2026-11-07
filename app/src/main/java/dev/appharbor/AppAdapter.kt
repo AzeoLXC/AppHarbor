@@ -76,7 +76,7 @@ class AppAdapter(
         holder.title.text = item.label
         holder.packageName.text = item.packageName
         holder.mark.text = if (isSelected) "✓" else if (item.system) "SYS" else "APP"
-        holder.mark.setTextColor(if (isSelected) HarborPalette.background else if (item.system) HarborPalette.accentAlt else HarborPalette.accent)
+        holder.mark.setTextColor(if (isSelected) HarborPalette.onAccent else if (item.system) HarborPalette.accentAlt else HarborPalette.accent)
         holder.mark.background = rounded(
             if (isSelected) HarborPalette.accent else HarborPalette.surfaceRaised,
             holder.itemView.context.dp(14f).toFloat()

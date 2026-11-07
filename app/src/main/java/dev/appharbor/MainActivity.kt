@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -67,9 +68,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = HarborPalette.background
-        window.navigationBarColor = HarborPalette.background
-        window.decorView.systemUiVisibility = 0
+        window.applyAppSystemBars()
         includeSystem = preferences.getBoolean("include_system", true)
         includeDisabled = preferences.getBoolean("include_disabled", true)
         sortByRecent = preferences.getBoolean("sort_recent", false)
@@ -100,17 +99,8 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(HarborPalette.background)
-            setPadding(dp(17f), dp(12f), dp(17f), dp(10f))
         }
-        root.setOnApplyWindowInsetsListener { view, insets ->
-            view.setPadding(
-                dp(17f),
-                dp(12f) + insets.systemWindowInsetTop,
-                dp(17f),
-                dp(10f) + insets.systemWindowInsetBottom
-            )
-            insets
-        }
+        root.applySystemBarInsets(dp(17f), dp(12f), dp(17f), dp(10f))
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -274,7 +264,18 @@ class MainActivity : Activity() {
         val recycler = RecyclerView(this).apply {
             layoutManager = GridLayoutManager(this@MainActivity, gridColumns())
             clipToPadding = false
-            setPadding(0, dp(3f), 0, dp(7f))
+            setPadding(dp(2f), dp(3f), dp(2f), dp(7f))
+            addItemDecoration(object : RecyclerView.ItemDecoration() {
+                override fun getItemOffsets(
+                    outRect: Rect,
+                    view: View,
+                    parent: RecyclerView,
+                    state: RecyclerView.State
+                ) {
+                    val gap = this@MainActivity.dp(5f)
+                    outRect.set(gap, gap, gap, gap)
+                }
+            })
             itemAnimator = null
         }
         recycler.adapter = AppAdapter(

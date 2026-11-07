@@ -1,12 +1,12 @@
 <resources>
     <style name="AppHarborTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#65E6C4</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">#08151D</item>
-        <item name="android:navigationBarColor">#08151D</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">@color/harbor_accent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/harbor_window</item>
+        <item name="android:navigationBarColor">@color/harbor_window</item>
+        <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:windowBackground">#08151D</item>
+        <item name="android:windowBackground">@color/harbor_window</item>
     </style>
 </resources>
