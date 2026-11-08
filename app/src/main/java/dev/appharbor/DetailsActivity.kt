@@ -15,6 +15,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
+import java.text.DateFormat
 import java.io.File
 import java.io.FileInputStream
 import java.util.Date
@@ -56,15 +57,18 @@ class DetailsActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(3f), 0, dp(13f))
         }
-        header.addView(actionText(this, "‹  Apps") { finish() })
+        header.addView(actionButton(this, "‹  Apps") { finish() })
         header.addView(label(this, if (archivePath == null) "Package details" else "APK inspection",
             16f, HarborPalette.text, true).apply {
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
-        header.addView(actionText(this, "⋮") { showActions(record) })
+        header.addView(actionButton(this, "⋮") { showActions(record) })
         root.addView(header)
-        val scroll = ScrollView(this)
+        val scroll = ScrollView(this).apply {
+            hideScrollbars()
+            isFillViewport = true
+        }
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(2f), 0, dp(18f))
@@ -75,7 +79,7 @@ class DetailsActivity : Activity() {
                 addView(label(this@DetailsActivity,
                     "The APK will be passed to Android's package installer. Android may ask you to confirm the install.",
                     12f, HarborPalette.muted))
-                addView(actionText(this@DetailsActivity, "Install APK", active = true) {
+                addView(actionButton(this@DetailsActivity, "Install APK", active = true) {
                     installArchive()
                 }.apply { setPadding(dp(19f), dp(12f), dp(19f), dp(12f)) }, LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -87,12 +91,12 @@ class DetailsActivity : Activity() {
                 val actions = LinearLayout(this@DetailsActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                 }
-                actions.addView(actionText(this@DetailsActivity, "Open") {
+                actions.addView(actionButton(this@DetailsActivity, "Open") {
                     openApplication(record.packageName)
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                     marginEnd = dp(5f)
                 })
-                actions.addView(actionText(this@DetailsActivity, "Android info") {
+                actions.addView(actionButton(this@DetailsActivity, "Android info") {
                     openSystemDetails(record.packageName)
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                     marginStart = dp(5f)
@@ -102,12 +106,12 @@ class DetailsActivity : Activity() {
                     orientation = LinearLayout.HORIZONTAL
                     setPadding(0, dp(8f), 0, 0)
                 }
-                rootActions.addView(actionText(this@DetailsActivity, "Force stop · root") {
+                rootActions.addView(actionButton(this@DetailsActivity, "Force stop · root") {
                     rootAction(record, "Force stop", "am force-stop --user 0")
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                     marginEnd = dp(5f)
                 })
-                rootActions.addView(actionText(this@DetailsActivity,
+                rootActions.addView(actionButton(this@DetailsActivity,
                     if (record.enabled) "Disable · root" else "Enable · root") {
                     rootAction(record, if (record.enabled) "Disable" else "Enable",
                         if (record.enabled) "pm disable-user --user 0" else "pm enable")
@@ -164,21 +168,23 @@ class DetailsActivity : Activity() {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = rounded(HarborPalette.surface, dp(21f).toFloat(), HarborPalette.border)
-            setPadding(dp(16f), dp(17f), dp(16f), dp(17f))
+            background = rounded(HarborPalette.surface, dp(12f).toFloat())
+            setPadding(dp(14f), dp(14f), dp(14f), dp(14f))
         }
         card.addView(ImageView(this).apply {
             setImageDrawable(record.icon)
             scaleType = ImageView.ScaleType.FIT_CENTER
-        }, LinearLayout.LayoutParams(dp(58f), dp(58f)))
+        }, LinearLayout.LayoutParams(dp(48f), dp(48f)))
         val text = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(13f), 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        text.addView(label(this, record.label, 19f, HarborPalette.text, true))
-        text.addView(label(this, record.packageName, 11f, HarborPalette.muted).apply {
+        text.addView(label(this, record.label, 18f, HarborPalette.text, true))
+        text.addView(label(this, record.packageName, 13f, HarborPalette.muted).apply {
             setPadding(0, dp(5f), 0, 0)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
         })
         text.addView(label(this, (if (record.system) "SYSTEM" else "USER") +
             "  ·  " + (if (record.enabled) "ENABLED" else "DISABLED"), 10f, HarborPalette.accent, true).apply {
@@ -189,29 +195,32 @@ class DetailsActivity : Activity() {
     }
 
     private fun section(parent: LinearLayout, title: String, fill: LinearLayout.() -> Unit) {
-        val card = LinearLayout(this).apply {
+        val section = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = rounded(HarborPalette.surface, dp(18f).toFloat(), HarborPalette.border)
-            setPadding(dp(15f), dp(13f), dp(15f), dp(13f))
+            setPadding(dp(1f), dp(8f), dp(1f), 0)
+            addView(label(this@DetailsActivity, title, 13f, HarborPalette.accent, true), 0)
             fill()
         }
-        card.addView(label(this, title, 10f, HarborPalette.accent, true), 0)
-        parent.addView(card, LinearLayout.LayoutParams(
+        parent.addView(section, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = dp(9f) })
+        ).apply { topMargin = dp(12f) })
     }
 
     private fun LinearLayout.infoRow(title: String, value: String, color: Int = HarborPalette.muted) {
         val row = LinearLayout(this@DetailsActivity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(9f), 0, dp(2f))
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            setPadding(0, dp(10f), 0, dp(10f))
         }
-        row.addView(label(this@DetailsActivity, title, 11f, HarborPalette.text, true))
-        row.addView(label(this@DetailsActivity, value, 11f, color).apply {
-            setPadding(0, dp(4f), 0, 0)
-        })
+        row.addView(label(this@DetailsActivity, title, 13f, HarborPalette.text, true),
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.42f))
+        row.addView(label(this@DetailsActivity, value, 13f, color).apply {
+            setTextIsSelectable(true)
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.58f))
         addView(row)
+        addView(View(this@DetailsActivity).apply { setBackgroundColor(HarborPalette.border) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1f)))
     }
 
     private fun showActions(record: AppRecord) {
@@ -306,7 +315,10 @@ class DetailsActivity : Activity() {
     }
 
     private fun dateText(time: Long): String =
-        if (time <= 0L) "Unknown" else Date(time).toString()
+        if (time <= 0L) "Unknown" else DateFormat.getDateTimeInstance(
+            DateFormat.MEDIUM,
+            DateFormat.SHORT
+        ).format(Date(time))
 
     private fun toast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()

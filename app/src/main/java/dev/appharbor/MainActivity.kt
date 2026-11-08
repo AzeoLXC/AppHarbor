@@ -18,6 +18,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
@@ -111,12 +112,8 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         titleBlock.addView(label(this, "AppHarbor", 23f, HarborPalette.text, bold = true))
-        titleBlock.addView(label(this, "LOCAL APP CONTROL", 10f, HarborPalette.muted, bold = true).apply {
-            letterSpacing = 0.12f
-            setPadding(0, dp(4f), 0, 0)
-        })
         header.addView(titleBlock)
-        header.addView(actionText(this, "＋  Import APK", active = true) { chooseApk() })
+        header.addView(actionButton(this, "＋  Import APK", active = true) { chooseApk() })
         root.addView(header)
         contentHost = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -125,7 +122,7 @@ class MainActivity : Activity() {
         navigationHost = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(0, dp(9f), 0, 0)
+            setPadding(0, dp(4f), 0, 0)
         }
         root.addView(navigationHost)
         setContentView(root)
@@ -149,30 +146,50 @@ class MainActivity : Activity() {
     private fun renderNavigation() {
         navigationHost.removeAllViews()
         if (page == Page.LIBRARY && selectedPackages.isNotEmpty()) {
-            navigationHost.addView(actionText(this, selectedPackages.size.toString() + " selected", active = true) { showBatchActions() }, weightParams())
-            navigationHost.addView(actionText(this, "Actions") { showBatchActions() }, weightParams())
-            navigationHost.addView(actionText(this, "Clear") {
+            navigationHost.addView(actionButton(this, selectedPackages.size.toString() + " selected", active = true) { showBatchActions() }, weightParams())
+            navigationHost.addView(actionButton(this, "Actions") { showBatchActions() }, weightParams())
+            navigationHost.addView(actionButton(this, "Clear") {
                 selectedPackages.clear()
                 renderPage()
             }, weightParams())
             return
         }
         val items = listOf(
-            Page.LIBRARY to "Apps",
-            Page.TOOLS to "Tools",
-            Page.PROFILES to "Lists",
-            Page.SETTINGS to "Settings"
+            Triple(Page.LIBRARY, "Apps", android.R.drawable.ic_menu_view),
+            Triple(Page.TOOLS, "Tools", android.R.drawable.ic_menu_manage),
+            Triple(Page.PROFILES, "Lists", android.R.drawable.ic_menu_agenda),
+            Triple(Page.SETTINGS, "Settings", android.R.drawable.ic_menu_preferences)
         )
-        items.forEach { (target, title) ->
-            navigationHost.addView(
-                actionText(this, title, active = target == page) {
-                    page = target
-                    renderPage()
-                },
-                weightParams()
-            )
+        items.forEach { (target, title, icon) ->
+            navigationHost.addView(navigationItem(title, icon, target == page) {
+                page = target
+                renderPage()
+            }, weightParams())
         }
     }
+
+    private fun navigationItem(title: String, icon: Int, selected: Boolean, action: () -> Unit): View =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            minimumHeight = dp(56f)
+            setPadding(dp(4f), dp(3f), dp(4f), dp(3f))
+            useNativeSelectableBackground()
+            isClickable = true
+            isFocusable = true
+            contentDescription = title
+            setOnClickListener { action() }
+            addView(ImageView(this@MainActivity).apply {
+                setImageResource(icon)
+                setColorFilter(if (selected) HarborPalette.accent else HarborPalette.muted)
+                contentDescription = null
+            }, LinearLayout.LayoutParams(dp(21f), dp(21f)))
+            addView(label(this@MainActivity, title, 12f,
+                if (selected) HarborPalette.accent else HarborPalette.muted,
+                bold = selected, gravity = Gravity.CENTER).apply {
+                setPadding(0, dp(3f), 0, 0)
+            })
+        }
 
     private fun weightParams() = LinearLayout.LayoutParams(
         0,
@@ -193,7 +210,7 @@ class MainActivity : Activity() {
                 label(this, selectedPackages.size.toString() + " selected", 13f, HarborPalette.accent, true),
                 LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             )
-            selection.addView(actionText(this, "Operations", active = true) { showBatchActions() })
+            selection.addView(actionButton(this, "Operations", active = true) { showBatchActions() })
             column.addView(selection, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -202,7 +219,7 @@ class MainActivity : Activity() {
 
         val summary = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            background = rounded(HarborPalette.surface, dp(20f).toFloat(), HarborPalette.border)
+            background = rounded(HarborPalette.surface, dp(12f).toFloat(), HarborPalette.border)
             setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
         }
         val appStat = statBlock("APPS", allApps.size.toString(), HarborPalette.accent)
@@ -223,7 +240,6 @@ class MainActivity : Activity() {
             setTextColor(HarborPalette.text)
             textSize = 14f
             setPadding(dp(15f), 0, dp(15f), 0)
-            background = rounded(HarborPalette.surfaceRaised, dp(15f).toFloat(), HarborPalette.border)
             setText(query)
         }
         search.addTextChangedListener(object : TextWatcher {
@@ -250,7 +266,7 @@ class MainActivity : Activity() {
             Filter.SYSTEM to "System",
             Filter.DISABLED to "Disabled"
         ).forEach { (type, title) ->
-            filterStrip.addView(actionText(this, title, active = type == filter) {
+            filterStrip.addView(actionButton(this, title, active = type == filter) {
                 filter = type
                 renderPage()
             }, LinearLayout.LayoutParams(
@@ -258,13 +274,16 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { marginEnd = dp(7f) })
         }
-        filterStrip.addView(actionText(this, "Sort") { showSortOptions() })
+        filterStrip.addView(actionButton(this, "Sort") { showSortOptions() })
         column.addView(filterStrip)
 
         val recycler = RecyclerView(this).apply {
             layoutManager = GridLayoutManager(this@MainActivity, gridColumns())
             clipToPadding = false
-            setPadding(dp(2f), dp(3f), dp(2f), dp(7f))
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            setPadding(0, dp(2f), 0, dp(7f))
             addItemDecoration(object : RecyclerView.ItemDecoration() {
                 override fun getItemOffsets(
                     outRect: Rect,
@@ -272,8 +291,7 @@ class MainActivity : Activity() {
                     parent: RecyclerView,
                     state: RecyclerView.State
                 ) {
-                    val gap = this@MainActivity.dp(5f)
-                    outRect.set(gap, gap, gap, gap)
+                    outRect.set(0, 0, 0, this@MainActivity.dp(1f))
                 }
             })
             itemAnimator = null
@@ -371,7 +389,10 @@ class MainActivity : Activity() {
     }
 
     private fun buildToolsPage(): View {
-        val scroll = ScrollView(this)
+        val scroll = ScrollView(this).apply {
+            hideScrollbars()
+            isFillViewport = true
+        }
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(3f), 0, dp(18f))
@@ -399,24 +420,49 @@ class MainActivity : Activity() {
     }
 
     private fun toolCard(parent: LinearLayout, title: String, subtitle: String, action: () -> Unit) {
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = rounded(HarborPalette.surface, dp(18f).toFloat(), HarborPalette.border)
-            setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
+        val icon = when (title) {
+            "Inspect or install APK" -> android.R.drawable.ic_menu_search
+            "Export installed apps" -> android.R.drawable.ic_menu_save
+            "Refresh app inventory" -> android.R.drawable.ic_popup_sync
+            "Usage access" -> android.R.drawable.ic_menu_info_details
+            else -> android.R.drawable.ic_menu_view
+        }
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4f), dp(12f), dp(4f), dp(12f))
+            useNativeSelectableBackground()
             isClickable = true
             isFocusable = true
             setOnClickListener { action() }
         }
-        card.addView(label(this, title, 15f, HarborPalette.text, true))
-        card.addView(label(this, subtitle, 12f, HarborPalette.muted).apply { setPadding(0, dp(6f), 0, 0) })
-        parent.addView(card, LinearLayout.LayoutParams(
+        row.addView(ImageView(this).apply {
+            setImageResource(icon)
+            setColorFilter(HarborPalette.accent)
+            contentDescription = null
+        }, LinearLayout.LayoutParams(dp(24f), dp(24f)))
+        val text = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(15f), 0, dp(8f), 0)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        text.addView(label(this, title, 15f, HarborPalette.text, true))
+        text.addView(label(this, subtitle, 13f, HarborPalette.muted).apply { setPadding(0, dp(4f), 0, 0) })
+        row.addView(text)
+        row.addView(label(this, "›", 23f, HarborPalette.muted, gravity = Gravity.CENTER))
+        parent.addView(row, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(9f) })
+        ))
+        parent.addView(View(this).apply { setBackgroundColor(HarborPalette.border) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1f)))
     }
 
     private fun buildProfilesPage(): View {
-        val scroll = ScrollView(this)
+        val scroll = ScrollView(this).apply {
+            hideScrollbars()
+            isFillViewport = true
+        }
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(3f), 0, dp(18f))
@@ -425,7 +471,7 @@ class MainActivity : Activity() {
         column.addView(label(this, "Save package groups for quick selection.", 13f, HarborPalette.muted).apply {
             setPadding(0, dp(5f), 0, dp(16f))
         })
-        column.addView(actionText(this, "Save current selection", active = true) {
+        column.addView(actionButton(this, "Save current selection", active = true) {
             saveSelectionAsList()
         }.apply { gravity = Gravity.CENTER })
         column.addView(label(this, "Saved lists", 15f, HarborPalette.accent, true).apply {
@@ -433,8 +479,31 @@ class MainActivity : Activity() {
         })
         val saved = readLists()
         if (saved.length() == 0) {
-            column.addView(label(this, "No lists yet. Select apps, then save them here.", 13f, HarborPalette.muted)
-                .apply { setPadding(dp(3f), dp(5f), dp(3f), dp(8f)) })
+            val empty = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(18f), dp(36f), dp(18f), dp(28f))
+            }
+            empty.addView(ImageView(this).apply {
+                setImageResource(android.R.drawable.ic_menu_agenda)
+                setColorFilter(HarborPalette.muted)
+                contentDescription = null
+            }, LinearLayout.LayoutParams(dp(36f), dp(36f)))
+            empty.addView(label(this, "No saved lists", 16f, HarborPalette.text, true, Gravity.CENTER).apply {
+                setPadding(0, dp(12f), 0, 0)
+            })
+            empty.addView(label(this, "Select apps and save them as a group for quick access.",
+                13f, HarborPalette.muted, gravity = Gravity.CENTER).apply {
+                setPadding(0, dp(6f), 0, dp(12f))
+            })
+            empty.addView(actionButton(this, "Go to Apps") {
+                page = Page.LIBRARY
+                renderPage()
+            })
+            column.addView(empty, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
         }
         for (i in 0 until saved.length()) {
             val item = saved.optJSONObject(i) ?: continue
@@ -442,15 +511,14 @@ class MainActivity : Activity() {
             val packages = item.optJSONArray("packages") ?: JSONArray()
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                background = rounded(HarborPalette.surface, dp(17f).toFloat(), HarborPalette.border)
-                setPadding(dp(15f), dp(13f), dp(15f), dp(12f))
+                setPadding(dp(4f), dp(12f), dp(4f), dp(12f))
             }
             row.addView(label(this, name, 15f, HarborPalette.text, true))
             row.addView(label(this, packages.length().toString() + " packages", 12f, HarborPalette.muted).apply {
                 setPadding(0, dp(4f), 0, dp(10f))
             })
             val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            buttons.addView(actionText(this@MainActivity, "Select", active = true) {
+            buttons.addView(actionButton(this@MainActivity, "Select", active = true) {
                 selectedPackages.clear()
                 for (j in 0 until packages.length()) {
                     packages.optString(j).takeIf { it.isNotBlank() }?.let(selectedPackages::add)
@@ -458,7 +526,7 @@ class MainActivity : Activity() {
                 page = Page.LIBRARY
                 renderPage()
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            buttons.addView(actionText(this@MainActivity, "Delete", danger = true) {
+            buttons.addView(actionButton(this@MainActivity, "Delete", danger = true) {
                 val current = readLists()
                 val updated = JSONArray()
                 for (j in 0 until current.length()) {
@@ -472,14 +540,19 @@ class MainActivity : Activity() {
             column.addView(row, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(8f) })
+            ))
+            column.addView(View(this).apply { setBackgroundColor(HarborPalette.border) },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1f)))
         }
         scroll.addView(column)
         return scroll
     }
 
     private fun buildSettingsPage(): View {
-        val scroll = ScrollView(this)
+        val scroll = ScrollView(this).apply {
+            hideScrollbars()
+            isFillViewport = true
+        }
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(3f), 0, dp(18f))
@@ -514,8 +587,8 @@ class MainActivity : Activity() {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = rounded(HarborPalette.surface, dp(16f).toFloat(), HarborPalette.border)
-            setPadding(dp(14f), dp(12f), dp(11f), dp(12f))
+            useNativeSelectableBackground()
+            setPadding(dp(4f), dp(13f), dp(4f), dp(13f))
         }
         val text = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -529,10 +602,13 @@ class MainActivity : Activity() {
         }
         row.addView(text)
         row.addView(toggle)
+        row.setOnClickListener { toggle.isChecked = !toggle.isChecked }
         parent.addView(row, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(8f) })
+        ))
+        parent.addView(View(this).apply { setBackgroundColor(HarborPalette.border) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1f)))
     }
 
     private fun showSortOptions() {

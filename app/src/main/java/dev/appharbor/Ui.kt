@@ -1,6 +1,7 @@
 package dev.appharbor
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Color
@@ -11,6 +12,8 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.Gravity
 import android.view.View
+import android.util.TypedValue
+import android.widget.Button
 import android.widget.TextView
 
 object HarborPalette {
@@ -103,33 +106,43 @@ fun label(
     includeFontPadding = false
 }
 
-fun actionText(
+fun actionButton(
     context: Context,
     text: String,
     active: Boolean = false,
     danger: Boolean = false,
     onClick: () -> Unit
-): TextView = label(
-    context,
-    text,
-    13f,
-    when {
+): Button = Button(context).apply {
+    this.text = text
+    textSize = 14f
+    isAllCaps = false
+    setTypeface(typeface, android.graphics.Typeface.BOLD)
+    gravity = Gravity.CENTER
+    setTextColor(when {
         danger -> HarborPalette.danger
         active -> HarborPalette.onAccent
         else -> HarborPalette.text
-    },
-    bold = true,
-    gravity = Gravity.CENTER
-).apply {
-    setPadding(context.dp(14f), context.dp(10f), context.dp(14f), context.dp(10f))
-    background = rounded(
-        if (active) HarborPalette.accent else HarborPalette.surfaceRaised,
-        context.dp(18f).toFloat(),
-        if (active) null else HarborPalette.border
+    })
+    backgroundTintList = ColorStateList.valueOf(
+        if (active) HarborPalette.accent else HarborPalette.surfaceRaised
     )
-    isClickable = true
-    isFocusable = true
+    minWidth = 0
+    minimumWidth = 0
+    minHeight = context.dp(48f)
+    setPadding(context.dp(12f), context.dp(6f), context.dp(12f), context.dp(6f))
     setOnClickListener { onClick() }
+}
+
+fun View.useNativeSelectableBackground() {
+    val value = TypedValue()
+    if (context.theme.resolveAttribute(android.R.attr.selectableItemBackground, value, true)) {
+        setBackgroundResource(value.resourceId)
+    }
+}
+
+fun View.hideScrollbars() {
+    isVerticalScrollBarEnabled = false
+    isHorizontalScrollBarEnabled = false
 }
 
 fun View.horizontalMargins(context: Context, start: Int = 0, top: Int = 0, end: Int = 0, bottom: Int = 0) {
