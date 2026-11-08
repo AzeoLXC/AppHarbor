@@ -36,17 +36,56 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.4.1
 
-      - name: Build debug APK
+      - name: Prepare release signing
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.APPHARBOR_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.APPHARBOR_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.APPHARBOR_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.APPHARBOR_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$KEYSTORE_BASE64" || -z "$KEYSTORE_PASSWORD" || -z "$KEY_ALIAS" || -z "$KEY_PASSWORD" ]]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Release signing secrets are missing. A debug APK will be uploaded as a workflow artifact; no GitHub Release will be published."
+            exit 0
+          fi
+
+          keystore_path="${RUNNER_TEMP}/appharbor-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          keytool -list -storetype JKS -keystore "$keystore_path" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          echo "available=true" >> "$GITHUB_OUTPUT"
+          echo "store_file=${keystore_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed release APK
+        if: steps.signing.outputs.available == 'true'
+        env:
+          ORG_GRADLE_PROJECT_APPHARBOR_STORE_FILE: ${{ steps.signing.outputs.store_file }}
+          ORG_GRADLE_PROJECT_APPHARBOR_STORE_PASSWORD: ${{ secrets.APPHARBOR_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_APPHARBOR_KEY_ALIAS: ${{ secrets.APPHARBOR_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_APPHARBOR_KEY_PASSWORD: ${{ secrets.APPHARBOR_KEY_PASSWORD }}
+        run: bash ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: Build debug APK when release signing is not configured
+        if: steps.signing.outputs.available != 'true'
         run: bash ./gradlew --no-daemon --stacktrace assembleDebug
 
       - name: Prepare versioned APK
         id: versioned_apk
+        env:
+          SIGNING_AVAILABLE: ${{ steps.signing.outputs.available }}
         run: |
           set -euo pipefail
           release_tag="v$(date -u +%Y%m%d)-${GITHUB_SHA:0:6}"
-          apk_name="AppHarbor-${release_tag}.apk"
+          if [[ "$SIGNING_AVAILABLE" == "true" ]]; then
+            apk_source="app/build/outputs/apk/release/app-release.apk"
+            apk_name="AppHarbor-${release_tag}.apk"
+          else
+            apk_source="app/build/outputs/apk/debug/app-debug.apk"
+            apk_name="AppHarbor-debug-${release_tag}.apk"
+          fi
           apk_path="${RUNNER_TEMP}/${apk_name}"
-          cp app/build/outputs/apk/debug/app-debug.apk "${apk_path}"
+          cp "${apk_source}" "${apk_path}"
           echo "tag=${release_tag}" >> "${GITHUB_OUTPUT}"
           echo "path=${apk_path}" >> "${GITHUB_OUTPUT}"
 
@@ -59,7 +98,7 @@ jobs:
           retention-days: 14
 
       - name: Publish GitHub release
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: steps.signing.outputs.available == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.versioned_apk.outputs.tag }}
@@ -77,3 +116,7 @@ jobs:
               --target "${GITHUB_SHA}" \
               --generate-notes
           fi
+
+      - name: Explain why the release was skipped
+        if: steps.signing.outputs.available != 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: echo "::notice::Add the four APPHARBOR signing secrets described in README.md to enable signed, updatable GitHub Releases."

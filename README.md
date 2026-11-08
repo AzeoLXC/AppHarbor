@@ -44,7 +44,23 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 The Android build workflow validates the Gradle Wrapper, sets up JDK 21 and Android SDK Platform 36, then builds the debug APK on pushes, pull requests, or manual runs. It uploads the APK as the `appharbor-debug-apk` artifact for 14 days.
 
-Pushes to `main` also create a GitHub Release. The release title and tag use `vYYYYMMDD-<6-character-commit-SHA>` (UTC), for example `v20261107-a1b2c3`. The release contains only the APK asset, named `AppHarbor-vYYYYMMDD-<6-character-commit-SHA>.apk`.
+Pushes to `main` create a GitHub Release when release signing is configured. The release title and tag use `vYYYYMMDD-<6-character-commit-SHA>` (UTC), for example `v20261107-a1b2c3`. The release contains only the signed APK asset, named `AppHarbor-vYYYYMMDD-<6-character-commit-SHA>.apk`. Without signing configuration, Actions uploads a debug APK artifact for inspection and skips publishing a GitHub Release; debug APKs from separate runners cannot reliably update one another.
+
+To enable signed releases, generate a keystore locally and keep it out of the repository:
+
+```bash
+keytool -genkeypair -v -storetype JKS -keystore appharbor-release.jks -alias appharbor -keyalg RSA -keysize 2048 -validity 10000
+base64 -w 0 appharbor-release.jks
+```
+
+Add these repository Actions secrets under **Settings → Secrets and variables → Actions**:
+
+- `APPHARBOR_KEYSTORE_BASE64`: output from the `base64` command.
+- `APPHARBOR_KEYSTORE_PASSWORD`: keystore password.
+- `APPHARBOR_KEY_ALIAS`: `appharbor` (or the alias selected above).
+- `APPHARBOR_KEY_PASSWORD`: key password.
+
+Keep a secure backup of the keystore and passwords. Android requires the same signing key for future APK updates.
 
 ## License
 
