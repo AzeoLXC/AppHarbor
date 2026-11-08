@@ -32,6 +32,7 @@ object HarborPalette {
 }
 
 fun Window.applyAppSystemBars() {
+    val decor = decorView
     statusBarColor = HarborPalette.background
     navigationBarColor = HarborPalette.background
 
@@ -39,10 +40,12 @@ fun Window.applyAppSystemBars() {
         setDecorFitsSystemWindows(false)
         val lightBars = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
             WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-        insetsController?.setSystemBarsAppearance(
-            if (HarborPalette.isDark) 0 else lightBars,
-            lightBars
-        )
+        decor.post {
+            decor.windowInsetsController?.setSystemBarsAppearance(
+                if (HarborPalette.isDark) 0 else lightBars,
+                lightBars
+            )
+        }
     } else {
         @Suppress("DEPRECATION")
         var flags = View.SYSTEM_UI_FLAG_VISIBLE
@@ -53,7 +56,7 @@ fun Window.applyAppSystemBars() {
             }
         }
         @Suppress("DEPRECATION")
-        decorView.systemUiVisibility = flags
+        decor.systemUiVisibility = flags
     }
 }
 
