@@ -53,7 +53,7 @@ jobs:
 
           keystore_path="${RUNNER_TEMP}/appharbor-release.jks"
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
-          keytool -list -storetype JKS -keystore "$keystore_path" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          keytool -list -storetype JKS -keystore "$keystore_path" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS"
           echo "available=true" >> "$GITHUB_OUTPUT"
           echo "store_file=${keystore_path}" >> "$GITHUB_OUTPUT"
 
